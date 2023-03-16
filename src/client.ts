@@ -10,7 +10,7 @@ async function run() {
   const handle = await client.workflow.start(SubscriptionWorkflow, {
     workflowId: 'subscription-workflow-' + nanoid(),
     taskQueue: 'subscription-workflow-v1',
-    args: ['foo@bar.com', '30 seconds']
+    args: ['foo@bar.com', '1 minute']
   });
 
   console.log(`Started workflow ${handle.workflowId}`);
