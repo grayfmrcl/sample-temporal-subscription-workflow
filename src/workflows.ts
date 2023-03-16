@@ -1,9 +1,15 @@
-import { sleep, proxyActivities, setHandler, defineSignal } from '@temporalio/workflow';
+import { sleep,
+  proxyActivities,
+  setHandler,
+  defineSignal,
+  condition
+} from '@temporalio/workflow';
 import * as activities from './activities';
 
 const {
   sendWelcomeEmail,
-  sendSubscriptionEndedEmail
+  sendSubscriptionEndedEmail,
+  sendTrialCancellationEmail
 } = proxyActivities<typeof activities>({
   startToCloseTimeout: '1 minute'
 });
@@ -20,8 +26,8 @@ export async function SubscriptionWorkflow(
   await sendWelcomeEmail(email);
   await sleep(trialPeriod);
 
-  if (isCanceled) {
-    await activities.sendTrialCancellationEmail(email);
+  if (await condition(() => isCanceled, trialPeriod)) {
+    await sendTrialCancellationEmail(email);
   } else {
     await sendSubscriptionEndedEmail(email);
   }
