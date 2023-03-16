@@ -1,6 +1,5 @@
 import { Connection, Client } from '@temporalio/client';
-import { nanoid } from 'nanoid';
-import { cancelSubscription } from "./workflows";
+import { cancelSubscription } from "./src/workflows";
 
 async function run() {
   const connection = await Connection.connect();
@@ -8,7 +7,7 @@ async function run() {
   const client = new Client({ connection });
 
   // This should be called from db or something...
-  const workflowId = 'subscription-workflow-g3cmBQMBtDlrf249mIQ1R';
+  const workflowId = 'subscription-workflow--5swYpqujtXRFQi9UsPOM';
 
   const handle = await client.workflow.getHandle(workflowId);
   await handle.signal(cancelSubscription);
