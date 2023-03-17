@@ -8,15 +8,22 @@ import {
 } from '@temporalio/workflow';
 import * as activities from './activities';
 import { Customer } from './types';
+import { InvalidCustomerError } from './errors';
 
 const {
   sendWelcomeEmail,
   sendTrialCancellationEmail,
   sendSubscriptionCancellationEmail,
   sendSubscriptionEndedEmail,
-  chargeCustomer
+  chargeCustomer,
+  validateCustomer
 } = proxyActivities<typeof activities>({
-  startToCloseTimeout: '1 minute'
+  startToCloseTimeout: '1 minute',
+  retry: {
+    initialInterval: '1s',
+    backoffCoefficient: 2,
+    maximumAttempts: 3,
+  }
 });
 
 export const cancelSubscription = defineSignal('cancelSignal');
@@ -25,7 +32,15 @@ export async function SubscriptionWorkflow(
   customer: Customer
 ) {
   await sendWelcomeEmail(customer);
-  // await sleep(trialPeriod);
+
+  // Use this to observe the deffered execution
+  // await sleep(customer.trialPeriod);
+  
+  // Use this for the non-retryable error scenario
+  // await validateCustomer(customer);
+
+  // Use this for the "unreliable" error scenario
+  // await chargeCustomer(customer);
 
   await TrialCycle(customer);
 }
@@ -36,8 +51,7 @@ async function TrialCycle(customer: Customer) {
   if (await condition(() => trialCanceled, customer.trialPeriod)) {
     await sendTrialCancellationEmail(customer);
   } else {
-    await sendSubscriptionEndedEmail(customer);
-    // await BillingCycle(customer);
+    await BillingCycle(customer);
   }
 }
 
