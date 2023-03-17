@@ -1,15 +1,20 @@
-import { sleep,
+import {
   proxyActivities,
-  setHandler,
   defineSignal,
-  condition
+  defineQuery,
+  sleep,
+  setHandler,
+  condition,
 } from '@temporalio/workflow';
 import * as activities from './activities';
+import { Customer } from './types';
 
 const {
   sendWelcomeEmail,
+  sendTrialCancellationEmail,
+  sendSubscriptionCancellationEmail,
   sendSubscriptionEndedEmail,
-  sendTrialCancellationEmail
+  chargeCustomer
 } = proxyActivities<typeof activities>({
   startToCloseTimeout: '1 minute'
 });
@@ -17,18 +22,42 @@ const {
 export const cancelSubscription = defineSignal('cancelSignal');
 
 export async function SubscriptionWorkflow(
-  email: string,
-  trialPeriod: string | number
+  customer: Customer
 ) {
-  let isCanceled = false;
-  setHandler(cancelSubscription, () => void (isCanceled = true));
+  await sendWelcomeEmail(customer);
+  // await sleep(trialPeriod);
 
-  await sendWelcomeEmail(email);
-  await sleep(trialPeriod);
+  await TrialCycle(customer);
+}
 
-  if (await condition(() => isCanceled, trialPeriod)) {
-    await sendTrialCancellationEmail(email);
+async function TrialCycle(customer: Customer) {
+  let trialCanceled = false;
+  setHandler(cancelSubscription, () => void (trialCanceled = true));
+  if (await condition(() => trialCanceled, customer.trialPeriod)) {
+    await sendTrialCancellationEmail(customer);
   } else {
-    await sendSubscriptionEndedEmail(email);
+    await sendSubscriptionEndedEmail(customer);
+    // await BillingCycle(customer);
   }
+}
+
+async function BillingCycle(customer: Customer) {
+
+  let subscriptionCanceled = false;
+  setHandler(cancelSubscription, () => void (subscriptionCanceled = true));
+
+  await chargeCustomer(customer);
+  for (let num = 0; num < customer.maxBillingPeriods-1; num++) {
+    // Wait 1 billing period to charge customer or if they cancel subscription
+    // whichever comes first
+    if (await condition(() => subscriptionCanceled, customer.billingPeriod)) {
+      // If customer cancelled their subscription send notification email
+      await sendSubscriptionCancellationEmail(customer);
+      break;
+    } else {
+      await chargeCustomer(customer);
+    }
+  }
+
+  if(!subscriptionCanceled) await sendSubscriptionEndedEmail(customer);
 }
