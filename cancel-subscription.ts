@@ -7,7 +7,7 @@ async function run() {
   const client = new Client({ connection });
 
   // This should be called from db or something...
-  const workflowId = 'subscription-workflow--5swYpqujtXRFQi9UsPOM';
+  const workflowId = 'subscription-workflow-lJXYfLS5O2Y2u7A7T920W';
 
   const handle = await client.workflow.getHandle(workflowId);
   await handle.signal(cancelSubscription);
