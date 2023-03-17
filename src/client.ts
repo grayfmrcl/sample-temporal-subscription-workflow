@@ -11,8 +11,8 @@ async function run() {
   const customer: Customer = {
     id: 'customer-001',
     email: 'foo@bar.com',
-    trialPeriod: '10s',
-    billingPeriod: '10s',
+    trialPeriod: '30s',
+    billingPeriod: '30s',
     maxBillingPeriods: 3,
     initialBillingPeriodCharge: 50
   }
